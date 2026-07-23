@@ -22,15 +22,11 @@ jobs:
           flutter config --enable-windows-desktop
           flutter build windows --release
 
-      - name: List build output
-        run: |
-          echo "=== build/ ==="
-          Get-ChildItem -Path build -Depth 3 | Select-Object FullName | Format-Table -AutoSize
-        shell: pwsh
-
       - name: Copy build files for installer
         run: |
           New-Item -ItemType Directory -Force -Path scripts\build_input
+          # Complete the CMake install step to get the full app bundle
+          cmake --install build\windows\x64 --config Release --prefix build\windows\runner\Release
           Copy-Item -Recurse -Force build\windows\runner\Release\* scripts\build_input\
         shell: pwsh
 
