@@ -18,6 +18,13 @@ jobs:
       - run: flutter pub get
       - run: flutter build windows --release
 
+      - name: Debug build output
+        run: |
+          echo "=== Current dir ==="
+          pwd
+          echo "=== Listing build/windows ==="
+          Get-ChildItem -Path build/windows -Recurse -Depth 2 | Select-Object FullName | Format-Table -AutoSize
+
       - name: Create installer
         run: |
           choco install innosetup -y --no-progress
