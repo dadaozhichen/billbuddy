@@ -3,7 +3,7 @@
 set -e
 
 APP_PATH="build/macos/Build/Products/Release/billbuddy.app"
-DMG_NAME="billbuddy-macos-1.0.0.dmg"
+DMG_NAME="billbuddy-macos-${VERSION:-1.0.0}.dmg"
 DMG_DIR="output"
 
 mkdir -p "$DMG_DIR"

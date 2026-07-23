@@ -1,6 +1,8 @@
 ; Inno Setup script for BillBuddy
 #define MyAppName "BillBuddy"
-#define MyAppVersion "1.0.0"
+#ifndef MyAppVersion
+  #define MyAppVersion "1.0.0"
+#endif
 #define MyAppPublisher "zhuhkblog.cn"
 #define MyAppURL "https://github.com/dadaozhichen/billbuddy"
 

@@ -2,7 +2,7 @@
 # Create BillBuddy .deb package for Linux
 set -e
 
-VERSION="1.0.0"
+VERSION="${VERSION:-1.0.0}"
 PKG_NAME="billbuddy"
 BUILD_DIR="build/linux/x64/release/bundle"
 OUTPUT_DIR="output"

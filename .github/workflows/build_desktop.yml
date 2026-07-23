@@ -17,6 +17,12 @@ jobs:
 
       - run: flutter pub get
 
+      - name: Extract version
+        shell: bash
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Enable Windows desktop and build
         run: |
           flutter config --enable-windows-desktop
@@ -39,7 +45,7 @@ jobs:
       - name: Create installer
         run: |
           choco install innosetup -y --no-progress
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" scripts\windows_installer.iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion="$env:VERSION" scripts\windows_installer.iss
         shell: pwsh
 
       - uses: actions/upload-artifact@v4
@@ -56,12 +62,20 @@ jobs:
           channel: stable
 
       - run: flutter pub get
+
+      - name: Extract version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - run: flutter build macos --release
 
       - name: Create DMG
         run: |
           chmod +x scripts/create_dmg.sh
           bash scripts/create_dmg.sh
+        env:
+          VERSION: ${{ env.VERSION }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -83,12 +97,20 @@ jobs:
           flutter config --enable-linux-desktop
 
       - run: flutter pub get
+
+      - name: Extract version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - run: flutter build linux --release
 
       - name: Create .deb package
         run: |
           chmod +x scripts/linux_package.sh
           bash scripts/linux_package.sh
+        env:
+          VERSION: ${{ env.VERSION }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -104,13 +126,18 @@ jobs:
           channel: stable
 
       - run: flutter pub get
+
+      - name: Extract version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - run: flutter build apk --release
 
       - name: Rename APK with version
         run: |
-          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+/_/')
           mv build/app/outputs/flutter-apk/app-release.apk \
-             build/app/outputs/flutter-apk/billbuddy-v${VERSION}.apk
+             build/app/outputs/flutter-apk/billbuddy-${VERSION}.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -159,7 +186,7 @@ jobs:
             | 🪟 Windows | `billbuddy-setup-*.exe` |
             | 🍎 macOS | `billbuddy-macos-*.dmg` |
             | 🐧 Linux | `billbuddy-*.deb` |
-            | 🤖 Android | `billbuddy-v*.apk` |
+            | 🤖 Android | `billbuddy-*.apk` |
 
             ### 安装方式
 
