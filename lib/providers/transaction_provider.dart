@@ -84,19 +84,59 @@ final monthSummaryProvider = FutureProvider<MonthSummary>((ref) async {
   ref.watch(refreshTriggerProvider);
   final ledgerId = _currentLedgerId(ref);
   final repo = ref.watch(transactionRepositoryProvider);
+  final currencyRepo = ref.watch(currencyRepositoryProvider);
   final now = DateTime.now();
   final start = DateTime(now.year, now.month, 1);
   final end = DateTime(now.year, now.month + 1, 1);
 
-  final expense = await repo.totalExpenseInRange(start, end, ledgerId: ledgerId);
-  final income = await repo.totalIncomeInRange(start, end, ledgerId: ledgerId);
+  // Get default currency.
+  final defaultCurrency = await ref.read(defaultCurrencyProvider.future);
+  final defaultCode = defaultCurrency.code;
 
-  // Pick up the currency symbol from the default currency.
-  final defaultCurrency =
-      await ref.read(defaultCurrencyProvider.future);
+  // Load all transactions for the month.
+  final transactions =
+      await repo.getByDateRange(start, end, ledgerId: ledgerId);
+
+  if (transactions.isEmpty) {
+    return MonthSummary(
+      expenseInCents: 0,
+      incomeInCents: 0,
+      currencySymbol: defaultCurrency.symbol,
+    );
+  }
+
+  // Collect distinct non-base currencies.
+  final foreignCodes = transactions
+      .map((t) => t.currencyCode)
+      .where((c) => c != defaultCode)
+      .toSet();
+
+  // Fetch current rates for all foreign currencies at once.
+  final rateMap = <String, double>{};
+  for (final code in foreignCodes) {
+    final rate = await currencyRepo.getRate(code, defaultCode);
+    if (rate != null) rateMap[code] = rate;
+  }
+
+  // Calculate totals using current rates.
+  double expense = 0;
+  double income = 0;
+
+  for (final t in transactions) {
+    final converted = t.currencyCode == defaultCode
+        ? t.amount
+        : t.amount * (rateMap[t.currencyCode] ?? 1);
+
+    if (t.isExpense) {
+      expense += converted;
+    } else {
+      income += converted;
+    }
+  }
+
   return MonthSummary(
-    expenseInCents: expense,
-    incomeInCents: income,
+    expenseInCents: (expense * 100).round(),
+    incomeInCents: (income * 100).round(),
     currencySymbol: defaultCurrency.symbol,
   );
 });

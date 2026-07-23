@@ -24,6 +24,7 @@ final allCurrenciesProvider = FutureProvider<List<CurrencyInfo>>((ref) async {
 
 /// The user's default currency.
 final defaultCurrencyProvider = FutureProvider<CurrencyInfo>((ref) async {
+  ref.watch(currencyRefreshProvider);
   final repo = ref.watch(currencyRepositoryProvider);
   final code = await repo.getDefaultCurrencyCode();
   return (await repo.getCurrency(code)) ??

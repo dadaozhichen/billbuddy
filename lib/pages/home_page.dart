@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../models/category.dart';
 import '../models/ledger.dart';
+import '../models/transaction.dart';
 import '../providers/account_provider.dart';
 import '../providers/category_provider.dart';
 import '../providers/ledger_provider.dart';
@@ -12,6 +14,18 @@ import '../widgets/summary_card.dart';
 import '../widgets/transaction_tile.dart';
 import 'add_transaction_page.dart';
 import 'create_ledger_sheet.dart';
+
+/// Common currency symbols for display.
+const _currencySymbols = <String, String>{
+  'CNY': '¥',
+  'USD': '\$',
+  'EUR': '€',
+  'JPY': '¥',
+  'GBP': '£',
+  'HKD': 'HK\$',
+  'KRW': '₩',
+  'THB': '฿',
+};
 
 /// Main tab showing today's transactions and month summary.
 class HomePage extends ConsumerWidget {
@@ -132,6 +146,9 @@ class HomePage extends ConsumerWidget {
                             type: t.type,
                           ),
                       accountName: acc,
+                      onTap: () => _showTransactionDetail(
+                        context, ref, t, cat, acc,
+                      ),
                       onDelete: t.id != null
                           ? () => ref
                               .read(transactionMutationsProvider)
@@ -271,7 +288,173 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  void _showAddSheet(BuildContext context, WidgetRef ref) {
+  void _showTransactionDetail(
+    BuildContext context,
+    WidgetRef ref,
+    Transaction t,
+    Category? cat,
+    String accountName,
+  ) {
+    final isExpense = t.isExpense;
+    final category = cat ?? Category(
+      name: '未分类',
+      iconName: 'help_outline',
+      colorValue: 0xFF9E9E9E,
+      type: t.type,
+    );
+    final symbol = _currencySymbols[t.currencyCode] ?? t.currencyCode;
+    final theme = Theme.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Category icon + name
+              CircleAvatar(
+                radius: 32,
+                backgroundColor: category.color.withValues(alpha: 0.15),
+                child: Icon(category.icon, color: category.color, size: 28),
+              ),
+              const SizedBox(height: 8),
+              Text(category.name, style: theme.textTheme.titleMedium),
+
+              // Amount (original currency)
+              const SizedBox(height: 12),
+              Text(
+                '${isExpense ? '-' : '+'}$symbol${NumberFormat.currency(symbol: '', decimalDigits: 2).format(t.amount)}',
+                style: theme.textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: isExpense
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.primary,
+                ),
+              ),
+
+              const SizedBox(height: 20),
+              const Divider(),
+
+              // Details
+              _detailRow(theme, '类型', isExpense ? '支出' : '收入'),
+              _detailRow(theme, '账户', accountName),
+              _detailRow(theme, '币种', t.currencyCode),
+              if (t.exchangeRate != null)
+                _detailRow(theme, '汇率', t.exchangeRate!.toStringAsFixed(4)),
+              _detailRow(theme, '日期', DateFormat('yyyy-MM-dd').format(t.date)),
+              if (t.note != null && t.note!.isNotEmpty)
+                _detailRow(theme, '备注', t.note!),
+
+              const SizedBox(height: 20),
+
+              // Actions
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        _showAddSheet(context, ref, transaction: t);
+                      },
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('编辑'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        _confirmAndDelete(context, ref, t, category.name);
+                      },
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('删除'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: theme.colorScheme.error,
+                        side: BorderSide(color: theme.colorScheme.error),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(ThemeData theme, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 60,
+            child: Text(label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                )),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(value, style: theme.textTheme.bodyMedium),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmAndDelete(
+    BuildContext context,
+    WidgetRef ref,
+    Transaction t,
+    String categoryName,
+  ) async {
+    final isExpense = t.isExpense;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除账单'),
+        content: Text(
+            '确定删除 "$categoryName" ${isExpense ? '-' : '+'}¥${t.amount.toStringAsFixed(2)} 吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && t.id != null) {
+      ref.read(transactionMutationsProvider).delete(t.id!);
+    }
+  }
+
+  void _showAddSheet(BuildContext context, WidgetRef ref,
+      {Transaction? transaction}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -279,7 +462,8 @@ class HomePage extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => const AddTransactionSheet(),
+      builder: (_) =>
+          AddTransactionSheet(transaction: transaction),
     );
   }
 }

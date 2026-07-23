@@ -12,9 +12,12 @@ import '../providers/currency_provider.dart';
 import '../providers/ledger_provider.dart';
 import '../providers/transaction_provider.dart';
 
-/// Modal bottom sheet for recording a single transaction.
+/// Modal bottom sheet for recording or editing a transaction.
 class AddTransactionSheet extends ConsumerStatefulWidget {
-  const AddTransactionSheet({super.key});
+  const AddTransactionSheet({super.key, this.transaction});
+
+  /// If set, the sheet will pre-fill fields and update on save.
+  final Transaction? transaction;
 
   @override
   ConsumerState<AddTransactionSheet> createState() =>
@@ -27,6 +30,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   int? _categoryId;
   int? _accountId;
   final _noteController = TextEditingController();
+  final _amountController = TextEditingController();
   final _rateController = TextEditingController();
   CurrencyInfo _selectedCurrency =
       const CurrencyInfo(code: 'CNY', name: '人民币', symbol: '¥');
@@ -34,10 +38,14 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   bool _saving = false;
   bool _rateInitialised = false;
   DateTime _selectedDate = DateTime.now();
+  bool _initialised = false;
+
+  bool get _isEditing => widget.transaction != null;
 
   @override
   void dispose() {
     _noteController.dispose();
+    _amountController.dispose();
     _rateController.dispose();
     super.dispose();
   }
@@ -54,21 +62,28 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
           await ref.read(defaultCurrencyProvider.future).then((c) => c.code);
       final isBase = _selectedCurrency.code == defaultCode;
 
-      await ref.read(transactionMutationsProvider).add(
-            Transaction(
-              amountInCents: _amountInCents,
-              ledgerId: ref.read(currentLedgerIdProvider),
-              currencyCode: _selectedCurrency.code,
-              exchangeRate: isBase ? null : _exchangeRate,
-              baseCurrencyCode: defaultCode,
-              type: _type,
-              categoryId: _categoryId!,
-              accountId: _accountId!,
-              date: _selectedDate,
-              note:
-                  _noteController.text.isEmpty ? null : _noteController.text,
-            ),
-          );
+      final t = Transaction(
+        id: widget.transaction?.id,
+        amountInCents: _amountInCents,
+        ledgerId: widget.transaction?.ledgerId ??
+            ref.read(currentLedgerIdProvider),
+        currencyCode: _selectedCurrency.code,
+        exchangeRate: isBase ? null : _exchangeRate,
+        baseCurrencyCode: defaultCode,
+        type: _type,
+        categoryId: _categoryId!,
+        accountId: _accountId!,
+        date: _selectedDate,
+        note: _noteController.text.isEmpty ? null : _noteController.text,
+      );
+
+      final mutations = ref.read(transactionMutationsProvider);
+      if (_isEditing) {
+        await mutations.update(t);
+      } else {
+        await mutations.add(t);
+      }
+
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
@@ -94,6 +109,38 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     _rateInitialised = true;
   }
 
+  /// Populate all fields from [widget.transaction] once async data is ready.
+  void _initFromTransaction({
+    required List<CurrencyInfo> currencies,
+    required CurrencyInfo defaultCurrency,
+  }) {
+    if (_initialised || !_isEditing) return;
+    final t = widget.transaction!;
+
+    _type = t.type;
+    _amountInCents = t.amountInCents;
+    _amountController.text = t.amount.toStringAsFixed(2);
+    _categoryId = t.categoryId;
+    _accountId = t.accountId;
+    _noteController.text = t.note ?? '';
+    _selectedDate = t.date;
+
+    // Look up the currency.
+    final matched = currencies.where((c) => c.code == t.currencyCode).firstOrNull;
+    if (matched != null) {
+      _selectedCurrency = matched;
+    }
+
+    // Exchange rate.
+    if (t.exchangeRate != null && t.currencyCode != defaultCurrency.code) {
+      _exchangeRate = t.exchangeRate;
+      _rateController.text = t.exchangeRate!.toStringAsFixed(4);
+      _rateInitialised = true;
+    }
+
+    _initialised = true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -107,6 +154,14 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     final defaultCurrencyAsync = ref.watch(defaultCurrencyProvider);
     final defaultCurrency =
         defaultCurrencyAsync.valueOrNull ?? _selectedCurrency;
+
+    // Init from editing transaction once async data is available.
+    currenciesAsync.whenData((currencies) {
+      _initFromTransaction(
+        currencies: currencies,
+        defaultCurrency: defaultCurrency,
+      );
+    });
 
     return Padding(
       padding: EdgeInsets.only(
@@ -134,6 +189,15 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             ),
             const SizedBox(height: 16),
 
+            // ── Title ───────────────────────────────────────────
+            Text(
+              _isEditing ? '编辑账单' : '记一笔',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+
             // ── Type toggle ────────────────────────────────────
             SegmentedButton<TransactionType>(
               segments: const [
@@ -152,7 +216,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               children: [
                 Expanded(
                   child: TextField(
-                    autofocus: true,
+                    controller: _amountController,
+                    autofocus: !_isEditing,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
@@ -345,7 +410,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                         color: Colors.white,
                       ),
                     )
-                  : const Text('保存', style: TextStyle(fontSize: 16)),
+                  : Text(_isEditing ? '保存修改' : '保存',
+                      style: const TextStyle(fontSize: 16)),
             ),
           ],
         ),
