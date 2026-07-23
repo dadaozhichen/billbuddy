@@ -16,7 +16,17 @@ jobs:
           channel: stable
 
       - run: flutter pub get
-      - run: flutter build windows --release
+
+      - name: Enable Windows desktop and build
+        run: |
+          flutter config --enable-windows-desktop
+          flutter build windows --release
+
+      - name: List build output
+        run: |
+          echo "=== build/ ==="
+          Get-ChildItem -Path build -Depth 3 | Select-Object FullName | Format-Table -AutoSize
+        shell: pwsh
 
       - name: Copy build files for installer
         run: |
