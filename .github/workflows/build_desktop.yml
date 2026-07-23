@@ -22,12 +22,18 @@ jobs:
           flutter config --enable-windows-desktop
           flutter build windows --release
 
-      - name: Copy build files for installer
+      - name: Collect build files for installer
         run: |
           New-Item -ItemType Directory -Force -Path scripts\build_input
-          # Complete the CMake install step to get the full app bundle
-          cmake --install build\windows\x64 --config Release --prefix build\windows\runner\Release
-          Copy-Item -Recurse -Force build\windows\runner\Release\* scripts\build_input\
+          echo "=== x64 runner Release ==="
+          Get-ChildItem build\windows\x64\runner\Release | Select-Object Name | Format-Table -AutoSize
+          echo "=== x64 flutter Release ==="
+          Get-ChildItem build\windows\x64\flutter\Release | Select-Object Name | Format-Table -AutoSize
+          # Copy all built files
+          Copy-Item -Recurse build\windows\x64\runner\Release\* scripts\build_input\
+          Copy-Item build\windows\x64\flutter\Release\*.dll scripts\build_input\ -ErrorAction SilentlyContinue
+          Copy-Item -Recurse build\flutter_assets scripts\build_input\
+          Copy-Item -Recurse build\native_assets scripts\build_input\ -ErrorAction SilentlyContinue
         shell: pwsh
 
       - name: Create installer
