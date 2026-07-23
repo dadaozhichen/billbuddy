@@ -18,17 +18,16 @@ jobs:
       - run: flutter pub get
       - run: flutter build windows --release
 
-      - name: Debug build output
+      - name: Copy build files for installer
         run: |
-          echo "=== Current dir ==="
-          pwd
-          echo "=== Listing build/windows ==="
-          Get-ChildItem -Path build/windows -Recurse -Depth 2 | Select-Object FullName | Format-Table -AutoSize
+          New-Item -ItemType Directory -Force -Path scripts\build_input
+          Copy-Item -Recurse -Force build\windows\runner\Release\* scripts\build_input\
+        shell: pwsh
 
       - name: Create installer
         run: |
           choco install innosetup -y --no-progress
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" scripts/windows_installer.iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" scripts\windows_installer.iss
         shell: pwsh
 
       - uses: actions/upload-artifact@v4

@@ -18,7 +18,7 @@ SolidCompression=yes
 UninstallDisplayIcon={app}\billbuddy.exe
 
 [Files]
-Source: "..\build\windows\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "build_input\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\billbuddy.exe"
