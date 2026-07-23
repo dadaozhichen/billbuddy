@@ -34,12 +34,14 @@ final defaultCurrencyProvider = FutureProvider<CurrencyInfo>((ref) async {
 /// All stored exchange rates (raw maps for the management page).
 final allExchangeRatesProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  ref.watch(currencyRefreshProvider);
   return ref.watch(currencyRepositoryProvider).getAllRates();
 });
 
 /// Get the rate from [fromCode] to [toCode].
 final exchangeRateProvider =
     FutureProvider.family<double?, (String, String)>((ref, pair) async {
+  ref.watch(currencyRefreshProvider);
   return ref.watch(currencyRepositoryProvider).getRate(pair.$1, pair.$2);
 });
 

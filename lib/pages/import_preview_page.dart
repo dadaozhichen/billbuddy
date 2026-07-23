@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
@@ -12,6 +13,7 @@ import '../providers/ledger_provider.dart';
 import '../providers/transaction_provider.dart';
 import '../services/excel_service.dart';
 import '../services/import_processor.dart';
+import '../services/shared_file_receiver.dart';
 
 /// Import flow: pick file → preview → confirm.
 class ImportPreviewPage extends ConsumerStatefulWidget {
@@ -28,11 +30,37 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
   ProcessedImport? _processed;
   final _pathController = TextEditingController();
   String? _lastError;
+  StreamSubscription<String>? _sharedSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkInitialSharedFile();
+    _sharedSub = SharedFileReceiver.fileStream.listen(_onFileShared);
+  }
 
   @override
   void dispose() {
     _pathController.dispose();
+    _sharedSub?.cancel();
     super.dispose();
+  }
+
+  Future<void> _checkInitialSharedFile() async {
+    final path = await SharedFileReceiver.getInitialSharedFile();
+    if (path != null) _onFileShared(path);
+  }
+
+  Future<void> _onFileShared(String path) async {
+    final file = File(path);
+    if (!file.existsSync()) return;
+    if (_loading || _result != null) return;
+    setState(() => _loading = true);
+    try {
+      await _parseFile(file);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   // ── File picker ─────────────────────────────────────────────────

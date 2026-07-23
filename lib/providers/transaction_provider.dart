@@ -82,6 +82,7 @@ class MonthSummary {
 
 final monthSummaryProvider = FutureProvider<MonthSummary>((ref) async {
   ref.watch(refreshTriggerProvider);
+  ref.watch(currencyRefreshProvider);
   final ledgerId = _currentLedgerId(ref);
   final repo = ref.watch(transactionRepositoryProvider);
   final currencyRepo = ref.watch(currencyRepositoryProvider);
