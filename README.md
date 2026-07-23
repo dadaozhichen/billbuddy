@@ -67,6 +67,7 @@ To update to a new version, download the latest installer for your platform and 
 | 🍎 macOS | `billbuddy-macos-*.dmg` |
 | 🪟 Windows | `billbuddy-setup-*.exe` |
 | 🐧 Linux | `billbuddy-*.deb` |
+| 🤖 Android | `app-release.apk` |
 
 ### macOS
 
@@ -91,6 +92,12 @@ To update to a new version, download the latest installer for your platform and 
    ```bash
    sudo dpkg -i billbuddy-*.deb
    ```
+
+### Android
+
+1. Download the latest `app-release.apk`
+2. Transfer to your phone or open directly in browser
+3. Install it (first time requires enabling **Install from unknown sources**)
 
 
 ## Tech Stack
