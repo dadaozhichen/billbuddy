@@ -62,13 +62,21 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
           await ref.read(defaultCurrencyProvider.future).then((c) => c.code);
       final isBase = _selectedCurrency.code == defaultCode;
 
+      // Auto-lookup rate if not manually set.
+      var rate = _exchangeRate;
+      if (!isBase && rate == null) {
+        rate = await ref
+            .read(currencyRepositoryProvider)
+            .getRate(_selectedCurrency.code, defaultCode);
+      }
+
       final t = Transaction(
         id: widget.transaction?.id,
         amountInCents: _amountInCents,
         ledgerId: widget.transaction?.ledgerId ??
             ref.read(currentLedgerIdProvider),
         currencyCode: _selectedCurrency.code,
-        exchangeRate: isBase ? null : _exchangeRate,
+        exchangeRate: isBase ? null : rate,
         baseCurrencyCode: defaultCode,
         type: _type,
         categoryId: _categoryId!,
@@ -273,31 +281,6 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               ],
             ),
             const SizedBox(height: 12),
-
-            // ── Exchange rate (shown for non-base currencies) ──
-            if (_selectedCurrency.code != defaultCurrency.code) ...[
-              TextField(
-                controller: _rateController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-                ],
-                decoration: InputDecoration(
-                  labelText:
-                      '汇率 (1 ${_selectedCurrency.code} = ? ${defaultCurrency.code})',
-                  hintText: '例如 7.24',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  isDense: true,
-                ),
-                onChanged: (v) {
-                  setState(() => _exchangeRate = double.tryParse(v));
-                },
-              ),
-              const SizedBox(height: 20),
-            ],
 
             // ── Category grid ──────────────────────────────────
             Text('分类', style: theme.textTheme.titleSmall),

@@ -114,6 +114,31 @@ class SettingsPage extends ConsumerWidget {
 
     if (!context.mounted) return;
 
+    if (result.checkFailed) {
+      // Network / API error — let the user go to releases page manually.
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('检查更新失败'),
+          content: Text('无法连接到更新服务器。\n${result.error}\n\n请手动前往 Releases 页面查看。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () {
+                UpdateService.openUrl(UpdateService.releasesUrl);
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('前往 Releases'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     if (!result.hasUpdate) {
       showDialog(
         context: context,

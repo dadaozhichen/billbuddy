@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
@@ -13,11 +12,13 @@ import '../providers/ledger_provider.dart';
 import '../providers/transaction_provider.dart';
 import '../services/excel_service.dart';
 import '../services/import_processor.dart';
-import '../services/shared_file_receiver.dart';
 
 /// Import flow: pick file → preview → confirm.
 class ImportPreviewPage extends ConsumerStatefulWidget {
-  const ImportPreviewPage({super.key});
+  const ImportPreviewPage({super.key, this.initialFilePath});
+
+  /// If set, the page will immediately parse this file on load (from WeChat share etc.).
+  final String? initialFilePath;
 
   @override
   ConsumerState<ImportPreviewPage> createState() => _ImportPreviewPageState();
@@ -30,49 +31,38 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
   ProcessedImport? _processed;
   final _pathController = TextEditingController();
   String? _lastError;
-  StreamSubscription<String>? _sharedSub;
+  int _targetLedgerId = 1;
 
   @override
   void initState() {
     super.initState();
-    _checkInitialSharedFile();
-    _sharedSub = SharedFileReceiver.fileStream.listen(_onFileShared);
+    _targetLedgerId = ref.read(currentLedgerIdProvider);
+    final initialPath = widget.initialFilePath;
+    if (initialPath != null && File(initialPath).existsSync()) {
+      _loading = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _parseFile(File(initialPath)).then((_) {
+          if (mounted) setState(() => _loading = false);
+        });
+      });
+    }
   }
 
   @override
   void dispose() {
     _pathController.dispose();
-    _sharedSub?.cancel();
     super.dispose();
-  }
-
-  Future<void> _checkInitialSharedFile() async {
-    final path = await SharedFileReceiver.getInitialSharedFile();
-    if (path != null) _onFileShared(path);
-  }
-
-  Future<void> _onFileShared(String path) async {
-    final file = File(path);
-    if (!file.existsSync()) return;
-    if (_loading || _result != null) return;
-    setState(() => _loading = true);
-    try {
-      await _parseFile(file);
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
   }
 
   // ── File picker ─────────────────────────────────────────────────
 
-  /// Uses Flutter's official [openFile] — works on macOS, Linux, Windows.
   Future<void> _pickFile() async {
     const typeGroup = XTypeGroup(
       label: 'Excel 文件',
       extensions: ['xlsx'],
     );
     final file = await openFile(acceptedTypeGroups: [typeGroup]);
-    if (file == null) return; // user cancelled
+    if (file == null) return;
     await _parseFile(File(file.path));
   }
 
@@ -112,14 +102,13 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
     final accs = await ref.read(accountRepositoryProvider).getAll();
     final accMap = {for (final a in accs) a.id!: a.name};
     final defaultCurrency = await ref.read(defaultCurrencyProvider.future);
-    final ledgerId = ref.read(currentLedgerIdProvider);
 
     final processed = ImportProcessor.process(
       rows: result.rows,
       categories: cats,
       accounts: accMap,
       defaultCurrencyCode: defaultCurrency.code,
-      ledgerId: ledgerId,
+      ledgerId: _targetLedgerId,
     );
 
     setState(() {
@@ -350,6 +339,45 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
                   },
                 ),
         ),
+
+        // ── Target ledger picker ──────────────────────────
+        Consumer(builder: (ctx, r, _) {
+          final ledgersAsync = r.watch(allLedgersProvider);
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: ledgersAsync.when(
+              data: (ledgers) => DropdownButtonFormField<int>(
+                initialValue: _targetLedgerId,
+                decoration: InputDecoration(
+                  labelText: '导入到账本',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                items: ledgers
+                    .map((l) => DropdownMenuItem(
+                          value: l.id,
+                          child: Row(
+                            children: [
+                              Icon(Icons.book_outlined, size: 18,
+                                  color: Color(l.colorValue)),
+                              const SizedBox(width: 8),
+                              Text(l.name),
+                            ],
+                          ),
+                        ))
+                    .toList(),
+                onChanged: (id) {
+                  if (id != null) setState(() => _targetLedgerId = id);
+                },
+              ),
+              loading: () => const SizedBox(),
+              error: (_, _) => const SizedBox(),
+            ),
+          );
+        }),
 
         SafeArea(
           child: Padding(

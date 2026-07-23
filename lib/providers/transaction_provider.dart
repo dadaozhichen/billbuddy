@@ -143,6 +143,14 @@ final monthSummaryProvider = FutureProvider<MonthSummary>((ref) async {
 });
 
 // ---------------------------------------------------------------------------
+// Tab tracking (used by ShellPage to notify pages of tab switches)
+// ---------------------------------------------------------------------------
+
+/// Incremented each time the user switches to a tab, so pages like
+/// StatisticsPage can re-fetch data without being destroyed by IndexedStack.
+final tabSwitchProvider = StateProvider<int>((_) => 0);
+
+// ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------
 
