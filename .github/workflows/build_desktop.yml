@@ -21,7 +21,7 @@ jobs:
       - name: Create installer
         run: |
           choco install innosetup -y --no-progress
-          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" scripts/windows_installer.iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" scripts/windows_installer.iss
         shell: pwsh
 
       - uses: actions/upload-artifact@v4
