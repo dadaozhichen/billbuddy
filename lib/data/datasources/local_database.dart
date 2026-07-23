@@ -18,7 +18,7 @@ class LocalDatabase {
 
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createTables,
       onUpgrade: _upgradeTables,
     );
@@ -154,6 +154,35 @@ class LocalDatabase {
         'created_at': DateTime.now().toIso8601String(),
       });
     }
+
+    if (oldVersion < 4) {
+      // Add business categories for existing users.
+      const newCategories = <Map<String, dynamic>>[
+        // Income - personal
+        {'name': '红包', 'icon_name': 'card_giftcard', 'color_value': 0xFFE91E63, 'type': 'income'},
+        {'name': '报销', 'icon_name': 'receipt_long', 'color_value': 0xFF795548, 'type': 'income'},
+        {'name': '租金收入', 'icon_name': 'real_estate_agent', 'color_value': 0xFF009688, 'type': 'income'},
+        // Income - business
+        {'name': '营业收入', 'icon_name': 'store', 'color_value': 0xFF2196F3, 'type': 'income'},
+        {'name': '项目收入', 'icon_name': 'assignment', 'color_value': 0xFF3F51B5, 'type': 'income'},
+        {'name': '客户付款', 'icon_name': 'payments', 'color_value': 0xFF4CAF50, 'type': 'income'},
+        {'name': '咨询服务', 'icon_name': 'support_agent', 'color_value': 0xFF9C27B0, 'type': 'income'},
+        {'name': '销售佣金', 'icon_name': 'trending_up', 'color_value': 0xFFFF9800, 'type': 'income'},
+        // Expense - business
+        {'name': '办公用品', 'icon_name': 'business', 'color_value': 0xFF795548, 'type': 'expense'},
+        {'name': '差旅', 'icon_name': 'flight', 'color_value': 0xFF2196F3, 'type': 'expense'},
+        {'name': '税费', 'icon_name': 'request_quote', 'color_value': 0xFFF44336, 'type': 'expense'},
+        {'name': '保险', 'icon_name': 'verified_user', 'color_value': 0xFF4CAF50, 'type': 'expense'},
+        {'name': '工资支出', 'icon_name': 'people', 'color_value': 0xFF9C27B0, 'type': 'expense'},
+        {'name': '市场推广', 'icon_name': 'campaign', 'color_value': 0xFFFF5722, 'type': 'expense'},
+        {'name': '设备采购', 'icon_name': 'computer', 'color_value': 0xFF607D8B, 'type': 'expense'},
+        {'name': '房租', 'icon_name': 'business_center', 'color_value': 0xFF009688, 'type': 'expense'},
+        {'name': '水电', 'icon_name': 'water_drop', 'color_value': 0xFF2196F3, 'type': 'expense'},
+      ];
+      for (final cat in newCategories) {
+        await db.insert('categories', cat);
+      }
+    }
   }
 
   /// Pre-populate default data.
@@ -167,8 +196,9 @@ class LocalDatabase {
       'created_at': DateTime.now().toIso8601String(),
     });
 
-    // ── expense categories ──────────────────────────────────────────
+    // ── expense categories (personal + business) ────────────────────
     const expenseCategories = [
+      // Personal
       ('餐饮', 'restaurant', 0xFFFF9800),
       ('交通', 'directions_car', 0xFF2196F3),
       ('购物', 'shopping_cart', 0xFFE91E63),
@@ -177,6 +207,16 @@ class LocalDatabase {
       ('医疗', 'local_hospital', 0xFFF44336),
       ('通讯', 'phone', 0xFF607D8B),
       ('教育', 'school', 0xFF3F51B5),
+      // Business
+      ('办公用品', 'business', 0xFF795548),
+      ('差旅', 'flight', 0xFF2196F3),
+      ('税费', 'request_quote', 0xFFF44336),
+      ('保险', 'verified_user', 0xFF4CAF50),
+      ('工资支出', 'people', 0xFF9C27B0),
+      ('市场推广', 'campaign', 0xFFFF5722),
+      ('设备采购', 'computer', 0xFF607D8B),
+      ('房租', 'business_center', 0xFF009688),
+      ('水电', 'water_drop', 0xFF2196F3),
     ];
 
     for (final (name, icon, color) in expenseCategories) {
@@ -188,11 +228,21 @@ class LocalDatabase {
       });
     }
 
-    // ── income categories ───────────────────────────────────────────
+    // ── income categories (personal + business) ─────────────────────
     const incomeCategories = [
+      // Personal
       ('工资', 'work', 0xFF4CAF50),
       ('兼职', 'laptop', 0xFF673AB7),
       ('投资', 'trending_up', 0xFFFF5722),
+      ('红包', 'card_giftcard', 0xFFE91E63),
+      ('报销', 'receipt_long', 0xFF795548),
+      ('租金收入', 'real_estate_agent', 0xFF009688),
+      // Business
+      ('营业收入', 'store', 0xFF2196F3),
+      ('项目收入', 'assignment', 0xFF3F51B5),
+      ('客户付款', 'payments', 0xFF4CAF50),
+      ('咨询服务', 'support_agent', 0xFF9C27B0),
+      ('销售佣金', 'trending_up', 0xFFFF9800),
     ];
 
     for (final (name, icon, color) in incomeCategories) {
