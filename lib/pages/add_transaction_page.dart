@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../models/category.dart';
 import '../models/currency.dart';
@@ -32,6 +33,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   double? _exchangeRate;
   bool _saving = false;
   bool _rateInitialised = false;
+  DateTime _selectedDate = DateTime.now();
 
   @override
   void dispose() {
@@ -62,7 +64,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               type: _type,
               categoryId: _categoryId!,
               accountId: _accountId!,
-              date: DateTime.now(),
+              date: _selectedDate,
               note:
                   _noteController.text.isEmpty ? null : _noteController.text,
             ),
@@ -290,6 +292,38 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                 isDense: true,
               ),
               maxLength: 50,
+            ),
+            const SizedBox(height: 20),
+
+            // ── Date picker ─────────────────────────────────────
+            InkWell(
+              onTap: () async {
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: _selectedDate,
+                  firstDate: DateTime.now().subtract(const Duration(days: 365 * 50)),
+                  lastDate: DateTime.now().add(const Duration(days: 365 * 50)),
+                  helpText: '选择日期',
+                  cancelText: '取消',
+                  confirmText: '确定',
+                );
+                if (date != null) setState(() => _selectedDate = date);
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: '日期',
+                  prefixIcon: const Icon(Icons.calendar_today, size: 20),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  isDense: true,
+                ),
+                child: Text(
+                  DateFormat('yyyy-MM-dd').format(_selectedDate),
+                  style: theme.textTheme.bodyLarge,
+                ),
+              ),
             ),
             const SizedBox(height: 20),
 
