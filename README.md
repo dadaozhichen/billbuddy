@@ -1,17 +1,79 @@
-# billbuddy
+# BillBuddy 🧾
 
-A new Flutter project.
+A cross-platform personal bookkeeping app built with Flutter.
+Track expenses and income across multiple currencies and ledgers,
+with Excel import/export and beautiful charts.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- 📒 **Multi-ledger** — Create separate books for personal, travel, business, etc.
+- 💰 **Multi-currency** — Record transactions in any currency with exchange rate conversion
+- 📊 **Statistics** — Pie charts for category breakdown, bar charts for monthly trends
+- 📁 **Excel import/export** — Backup or batch-add transactions via `.xlsx` files
+- 🗂 **Categories** — Built-in expense & income categories with icons
+- 🎨 **Material Design 3** — Clean, modern UI with dark mode support
+- 📱 **Mobile-friendly** — Bottom sheets, swipe-to-delete, large touch targets
 
-A few resources to get you started if this is your first Flutter project:
+## Platforms
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+| Platform | Status |
+|----------|--------|
+| macOS | ✅ |
+| Windows | ✅ (CI builds) |
+| Linux | ✅ (CI builds) |
+| iOS | ✅ |
+| Android | ✅ |
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Quick Start
+
+```bash
+# Clone
+git clone https://github.com/dadaozhichen/billbuddy.git
+cd billbuddy
+
+# Run
+flutter pub get
+flutter run -d macos   # or -d windows, -d linux, -d ios, -d android
+```
+
+## Build from Source
+
+```bash
+# macOS
+flutter build macos --release
+
+# Windows (requires Windows host)
+flutter build windows --release
+
+# Linux (requires Linux host)
+flutter build linux --release
+
+# iOS (requires macOS + Xcode)
+flutter build ios --release
+
+# Android
+flutter build appbundle --release
+```
+
+## Download Pre-built Binaries
+
+Pre-built desktop versions are available on the
+[Releases](https://github.com/dadaozhichen/billbuddy/releases) page,
+or built on-demand via
+[GitHub Actions](https://github.com/dadaozhichen/billbuddy/actions).
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Flutter 3.44+ / Dart 3.12+ |
+| State Management | Riverpod |
+| Database | SQLite (sqflite) |
+| Charts | fl_chart |
+| Excel | excel (pure Dart) |
+
+## License
+
+```
+Copyright © 2026 zhuhkblog.cn. All rights reserved.
+```
