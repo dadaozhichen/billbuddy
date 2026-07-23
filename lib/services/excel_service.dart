@@ -59,6 +59,44 @@ class ExcelService {
       ]);
     }
 
+    // ── Summary rows ───────────────────────────────────────────────
+    final totalIncome = transactions
+        .where((t) => t.isIncome)
+        .fold<double>(0, (sum, t) => sum + t.baseAmount);
+    final totalExpense = transactions
+        .where((t) => t.isExpense)
+        .fold<double>(0, (sum, t) => sum + t.baseAmount);
+    final balance = totalIncome - totalExpense;
+    final baseCurrency = transactions.first.baseCurrencyCode;
+
+    sheet.appendRow([TextCellValue('')]); // blank separator
+
+    sheet.appendRow([
+      TextCellValue('汇总'),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+      TextCellValue(''),
+    ]);
+
+    void addSummaryRow(String label, double value) {
+      sheet.appendRow([
+        TextCellValue(label),
+        TextCellValue(''),
+        DoubleCellValue(value),
+        TextCellValue(baseCurrency),
+        TextCellValue(''),
+        TextCellValue(''),
+        TextCellValue(''),
+      ]);
+    }
+
+    addSummaryRow('总收入', totalIncome);
+    addSummaryRow('总支出', totalExpense);
+    addSummaryRow('结余', balance);
+
     // Auto-size columns.
     for (var i = 0; i < _headers.length; i++) {
       sheet.setColumnWidth(i, 14);

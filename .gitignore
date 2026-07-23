@@ -45,3 +45,4 @@ app.*.map.json
 /android/app/release
 scripts/build_input
 scripts/output
+output/
