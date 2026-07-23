@@ -18,18 +18,6 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
   StatsPeriod _period = StatsPeriod.thisMonth;
 
   @override
-  void initState() {
-    super.initState();
-    // Re-fetch data each time the Statistics tab is selected.
-    ref.listen(tabSwitchProvider, (prev, next) {
-      if (prev != next) {
-        ref.invalidate(statsProvider(_period));
-        ref.invalidate(monthlyTrendProvider);
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     final statsAsync = ref.watch(statsProvider(_period));
     final trendAsync = ref.watch(monthlyTrendProvider);

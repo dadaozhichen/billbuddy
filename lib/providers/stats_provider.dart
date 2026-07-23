@@ -53,6 +53,8 @@ class StatsSnapshot {
 /// Provider that computes statistics for the selected period.
 final statsProvider =
     FutureProvider.family<StatsSnapshot, StatsPeriod>((ref, period) async {
+  ref.watch(refreshTriggerProvider);
+  ref.watch(tabSwitchProvider);
   final ledgerId = ref.watch(currentLedgerIdProvider);
   final repo = ref.watch(transactionRepositoryProvider);
   final now = DateTime.now();
@@ -111,6 +113,7 @@ final statsProvider =
 /// (yearMonth, expenseInCents, incomeInCents)
 final monthlyTrendProvider = FutureProvider<List<(String, int, int)>>((ref) {
   ref.watch(refreshTriggerProvider);
+  ref.watch(tabSwitchProvider);
   final ledgerId = ref.watch(currentLedgerIdProvider);
   return ref
       .watch(transactionRepositoryProvider)
