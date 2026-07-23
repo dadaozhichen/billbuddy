@@ -55,12 +55,18 @@ flutter build ios --release
 flutter build appbundle --release
 ```
 
-## Download Pre-built Binaries
+## Download Installers
 
-Pre-built desktop versions are available on the
+Pre-built installers for all platforms are available on the
 [Releases](https://github.com/dadaozhichen/billbuddy/releases) page,
 or built on-demand via
 [GitHub Actions](https://github.com/dadaozhichen/billbuddy/actions).
+
+| Platform | Installer Format |
+|----------|-----------------|
+| 🪟 Windows | `billbuddy-setup-*.exe` |
+| 🍎 macOS | `billbuddy-macos-*.dmg` |
+| 🐧 Linux | `billbuddy-*.deb` |
 
 ## Tech Stack
 
