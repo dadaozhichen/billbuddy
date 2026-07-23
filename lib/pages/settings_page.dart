@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../models/currency.dart';
 import '../providers/currency_provider.dart';
+import '../services/update_service.dart';
 import 'exchange_rate_page.dart';
 import 'export_sheet.dart';
 import 'import_preview_page.dart';
@@ -13,7 +15,6 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final defaultCurrencyAsync = ref.watch(defaultCurrencyProvider);
     final currenciesAsync = ref.watch(allCurrenciesProvider);
 
@@ -85,12 +86,86 @@ class SettingsPage extends ConsumerWidget {
           const Divider(),
 
           // ── About ─────────────────────────────────────────────
+          _VersionTile(),
           ListTile(
-            leading: Icon(Icons.info_outline,
-                color: theme.colorScheme.onSurfaceVariant),
-            title: Text('版本',
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-            subtitle: const Text('1.0.0'),
+            leading: const Icon(Icons.system_update_outlined),
+            title: const Text('检查更新'),
+            subtitle: const Text('从 GitHub 获取最新版本'),
+            onTap: () => _checkUpdate(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _checkUpdate(BuildContext context) async {
+    // Loading dialog.
+    // ignore: use_build_context_synchronously
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final result = await UpdateService.check();
+
+    // Close loading dialog.
+    if (context.mounted) Navigator.of(context).pop();
+
+    if (!context.mounted) return;
+
+    if (!result.hasUpdate) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('已是最新版本'),
+          content: Text('当前版本 v${result.currentVersion} 已是最新'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('好的'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Update available.
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('发现新版本 🎉'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('当前版本：v${result.currentVersion}'),
+            Text('最新版本：v${result.latestVersion}',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            if (result.releaseNotes != null) ...[
+              const SizedBox(height: 12),
+              const Text('更新内容：',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(result.releaseNotes!,
+                  style: const TextStyle(fontSize: 13)),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('稍后'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final url = result.releaseUrl ??
+                  'https://github.com/dadaozhichen/billbuddy/releases';
+              UpdateService.openUrl(url);
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('下载更新'),
           ),
         ],
       ),
@@ -147,6 +222,27 @@ class _SectionHeader extends StatelessWidget {
           color: theme.colorScheme.primary,
         ),
       ),
+    );
+  }
+}
+
+/// Shows the current app version (loaded from package info).
+class _VersionTile extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return FutureBuilder<PackageInfo>(
+      future: PackageInfo.fromPlatform(),
+      builder: (context, snapshot) {
+        final version = snapshot.data?.version ?? '加载中...';
+        return ListTile(
+          leading: Icon(Icons.info_outline,
+              color: theme.colorScheme.onSurfaceVariant),
+          title: Text('版本',
+              style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+          subtitle: Text(version),
+        );
+      },
     );
   }
 }

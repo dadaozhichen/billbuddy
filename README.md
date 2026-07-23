@@ -55,18 +55,43 @@ flutter build ios --release
 flutter build appbundle --release
 ```
 
-## Download Installers
+## Download & Update
 
 Pre-built installers for all platforms are available on the
-[Releases](https://github.com/dadaozhichen/billbuddy/releases) page,
-or built on-demand via
-[GitHub Actions](https://github.com/dadaozhichen/billbuddy/actions).
+[Releases](https://github.com/dadaozhichen/billbuddy/releases) page.
 
-| Platform | Installer Format |
-|----------|-----------------|
-| 🪟 Windows | `billbuddy-setup-*.exe` |
+To update to a new version, download the latest installer for your platform and follow the steps below.
+
+| Platform | Installer |
+|----------|-----------|
 | 🍎 macOS | `billbuddy-macos-*.dmg` |
+| 🪟 Windows | `billbuddy-setup-*.exe` |
 | 🐧 Linux | `billbuddy-*.deb` |
+
+### macOS
+
+1. Download the latest `.dmg`
+2. Open it and drag **BillBuddy.app** to **Applications** (replace the old version)
+3. First launch — macOS may block it because it's not notarized:
+   - **Option A:** Right-click `BillBuddy.app` → **Open** → **Open**
+   - **Option B:** Run in Terminal:
+     ```bash
+     xattr -dr com.apple.quarantine /Applications/BillBuddy.app
+     ```
+
+### Windows
+
+1. Download the latest `.exe`
+2. Run the installer — it will replace the old version automatically
+
+### Linux
+
+1. Download the latest `.deb`
+2. Install with:
+   ```bash
+   sudo dpkg -i billbuddy-*.deb
+   ```
+
 
 ## Tech Stack
 

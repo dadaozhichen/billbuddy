@@ -59,15 +59,17 @@ class ExcelService {
       ]);
     }
 
-    // ── Summary rows ───────────────────────────────────────────────
-    final totalIncome = transactions
-        .where((t) => t.isIncome)
-        .fold<double>(0, (sum, t) => sum + t.baseAmount);
-    final totalExpense = transactions
-        .where((t) => t.isExpense)
-        .fold<double>(0, (sum, t) => sum + t.baseAmount);
-    final balance = totalIncome - totalExpense;
-    final baseCurrency = transactions.first.baseCurrencyCode;
+    // ── Summary rows (grouped by base currency) ──────────────────────
+    final currencyGroups = <String, _CurrencyGroup>{};
+    for (final t in transactions) {
+      final group = currencyGroups.putIfAbsent(
+          t.baseCurrencyCode, () => _CurrencyGroup());
+      if (t.isIncome) {
+        group.income += t.baseAmount;
+      } else {
+        group.expense += t.baseAmount;
+      }
+    }
 
     sheet.appendRow([TextCellValue('')]); // blank separator
 
@@ -81,21 +83,27 @@ class ExcelService {
       TextCellValue(''),
     ]);
 
-    void addSummaryRow(String label, double value) {
+    void addSummaryRow(String label, double value, String currency) {
       sheet.appendRow([
         TextCellValue(label),
         TextCellValue(''),
         DoubleCellValue(value),
-        TextCellValue(baseCurrency),
+        TextCellValue(currency),
         TextCellValue(''),
         TextCellValue(''),
         TextCellValue(''),
       ]);
     }
 
-    addSummaryRow('总收入', totalIncome);
-    addSummaryRow('总支出', totalExpense);
-    addSummaryRow('结余', balance);
+    for (final entry in currencyGroups.entries) {
+      final currency = entry.key;
+      final group = entry.value;
+      final balance = group.income - group.expense;
+      addSummaryRow('总收入', group.income, currency);
+      addSummaryRow('总支出', group.expense, currency);
+      addSummaryRow('结余', balance, currency);
+      sheet.appendRow([TextCellValue('')]); // blank separator between currencies
+    }
 
     // Auto-size columns.
     for (var i = 0; i < _headers.length; i++) {
@@ -247,4 +255,10 @@ class ExcelService {
       }
     }
   }
+}
+
+/// Helper for grouping summary totals by base currency.
+class _CurrencyGroup {
+  double income = 0;
+  double expense = 0;
 }
