@@ -337,7 +337,8 @@ class HomePage extends ConsumerWidget {
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // Handle
@@ -417,6 +418,7 @@ class HomePage extends ConsumerWidget {
                 ],
               ),
             ],
+          ),
           ),
         ),
       ),

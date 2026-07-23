@@ -122,8 +122,15 @@ class ExcelService {
   /// Parse [bytes] (.xlsx) into raw [ExcelRow]s and [ImportError]s.
   static ImportResult parse(Uint8List bytes) {
     final excel = Excel.decodeBytes(bytes);
-    final sheet = excel.tables.values.firstOrNull;
-    if (sheet == null) {
+
+    // Prefer the "账单" sheet (our export), then any sheet with data,
+    // fallback to the first available sheet.
+    var sheet = excel['账单'];
+    if (sheet.rows.length <= 1) {
+      final first = excel.tables.values.firstOrNull;
+      if (first != null) sheet = first;
+    }
+    if (sheet.rows.isEmpty) {
       return const ImportResult(rows: [], errors: []);
     }
 

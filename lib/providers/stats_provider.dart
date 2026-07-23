@@ -24,14 +24,16 @@ class StatsSnapshot {
   final int expenseInCents;
   final int incomeInCents;
   final int transactionCount;
-  final List<CategoryExpense> categoryBreakdown;
+  final List<CategoryExpense> expenseBreakdown;
+  final List<CategoryExpense> incomeBreakdown;
   final String currencySymbol;
 
   const StatsSnapshot({
     required this.expenseInCents,
     required this.incomeInCents,
     required this.transactionCount,
-    required this.categoryBreakdown,
+    required this.expenseBreakdown,
+    required this.incomeBreakdown,
     this.currencySymbol = '¥',
   });
 
@@ -81,11 +83,12 @@ final statsProvider =
       await repo.totalExpenseInRange(start, end, ledgerId: ledgerId);
   final income =
       await repo.totalIncomeInRange(start, end, ledgerId: ledgerId);
-  final catRaw = await repo.expenseByCategory(start, end, ledgerId: ledgerId);
+  final expenseCatRaw = await repo.expenseByCategory(start, end, ledgerId: ledgerId);
+  final incomeCatRaw = await repo.incomeByCategory(start, end, ledgerId: ledgerId);
   final allCats = await ref.read(categoryRepositoryProvider).getAll();
   final catMap = {for (final c in allCats) c.id!: c};
 
-  final categoryBreakdown = catRaw
+  List<CategoryExpense> buildBreakdown(List<(int, int)> raw) => raw
       .where((pair) => catMap.containsKey(pair.$1))
       .map((pair) => CategoryExpense(
             category: catMap[pair.$1]!,
@@ -104,7 +107,8 @@ final statsProvider =
     expenseInCents: expense,
     incomeInCents: income,
     transactionCount: txns.length,
-    categoryBreakdown: categoryBreakdown,
+    expenseBreakdown: buildBreakdown(expenseCatRaw),
+    incomeBreakdown: buildBreakdown(incomeCatRaw),
     currencySymbol: defaultCurrency.symbol,
   );
 });

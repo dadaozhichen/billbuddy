@@ -61,13 +61,37 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
             ),
             const SizedBox(height: 8),
 
-            // ── Category breakdown (pie chart) ───────────────
+            // ── Category breakdown (side by side) ────────────
             statsAsync.when(
               data: (s) {
-                if (s.categoryBreakdown.isEmpty) return const SizedBox();
-                return _CategoryPieChart(
-                  data: s.categoryBreakdown,
-                  totalInCents: s.expenseInCents,
+                final hasExpense = s.expenseBreakdown.isNotEmpty;
+                final hasIncome = s.incomeBreakdown.isNotEmpty;
+                if (!hasExpense && !hasIncome) return const SizedBox();
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (hasExpense)
+                        Expanded(
+                          child: _CategoryPieChart(
+                            title: '支出',
+                            data: s.expenseBreakdown,
+                            totalInCents: s.expenseInCents,
+                          ),
+                        ),
+                      if (hasExpense && hasIncome)
+                        const SizedBox(width: 12),
+                      if (hasIncome)
+                        Expanded(
+                          child: _CategoryPieChart(
+                            title: '收入',
+                            data: s.incomeBreakdown,
+                            totalInCents: s.incomeInCents,
+                          ),
+                        ),
+                    ],
+                  ),
                 );
               },
               loading: () => const SizedBox(),
@@ -133,10 +157,12 @@ class _PeriodSelector extends StatelessWidget {
 
 class _CategoryPieChart extends StatelessWidget {
   const _CategoryPieChart({
+    required this.title,
     required this.data,
     required this.totalInCents,
   });
 
+  final String title;
   final List<CategoryExpense> data;
   final int totalInCents;
 
@@ -150,44 +176,40 @@ class _CategoryPieChart extends StatelessWidget {
         : 0;
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('支出分类占比',
+            Text(title,
                 style: theme.textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                SizedBox(
-                  width: 140,
-                  height: 140,
-                  child: PieChart(
-                    PieChartData(
-                      sections: [
-                        ...items.asMap().entries.map((e) =>
-                            _section(e.value, e.key, items.length)),
-                        if (others > 0)
-                          PieChartSectionData(
-                            value: others.toDouble(),
-                            color: theme.colorScheme.outlineVariant,
-                            title: '其他',
-                            titleStyle: const TextStyle(fontSize: 10),
-                            radius: 50,
-                          ),
-                      ],
-                      centerSpaceRadius: 30,
-                      sectionsSpace: 2,
-                    ),
-                  ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: 120,
+              height: 120,
+              child: PieChart(
+                PieChartData(
+                  sections: [
+                    ...items.asMap().entries.map((e) =>
+                        _section(e.value, e.key, items.length)),
+                    if (others > 0)
+                      PieChartSectionData(
+                        value: others.toDouble(),
+                        color: theme.colorScheme.outlineVariant,
+                        title: '其他',
+                        titleStyle: const TextStyle(fontSize: 9),
+                        radius: 40,
+                      ),
+                  ],
+                  centerSpaceRadius: 24,
+                  sectionsSpace: 2,
                 ),
-                const SizedBox(width: 16),
-                Expanded(child: _PieLegend(items: items, total: totalInCents)),
-              ],
+              ),
             ),
+            const SizedBox(height: 8),
+            _PieLegend(items: items, total: totalInCents),
           ],
         ),
       ),
@@ -205,8 +227,8 @@ class _CategoryPieChart extends StatelessWidget {
       value: item.totalInCents.toDouble(),
       color: color,
       title: '$pct%',
-      titleStyle: const TextStyle(fontSize: 11, color: Colors.white),
-      radius: 50,
+      titleStyle: const TextStyle(fontSize: 9, color: Colors.white),
+      radius: 40,
     );
   }
 }

@@ -138,6 +138,30 @@ class TransactionRepository {
         .toList();
   }
 
+  /// Income subtotal per category for the given [range].
+  Future<List<(int, int)>> incomeByCategory(
+    DateTime start,
+    DateTime end, {
+    int? ledgerId,
+  }) async {
+    final db = await LocalDatabase.database;
+    final conditions = <String>["type = 'income'", 'date >= ?', 'date <= ?'];
+    final args = [start.toIso8601String(), end.toIso8601String()];
+    if (ledgerId != null) {
+      conditions.add('ledger_id = ?');
+      args.add(ledgerId.toString());
+    }
+    final rows = await db.rawQuery(
+      'SELECT category_id, SUM(amount_in_cents) AS total'
+      ' FROM transactions WHERE ${conditions.join(' AND ')}'
+      ' GROUP BY category_id ORDER BY total DESC',
+      args,
+    );
+    return rows
+        .map((r) => (r['category_id'] as int, (r['total'] as int?) ?? 0))
+        .toList();
+  }
+
   /// Monthly expense & income totals for the last [months].
   ///
   /// Returns tuples of `(yearMonth, expenseInCents, incomeInCents)`.

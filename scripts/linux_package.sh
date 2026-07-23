@@ -44,6 +44,7 @@ Exec=/usr/bin/billbuddy
 Icon=billbuddy
 Terminal=false
 Type=Application
+MimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;
 Categories=Office;Finance;
 EOF
 

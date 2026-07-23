@@ -60,6 +60,7 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
     const typeGroup = XTypeGroup(
       label: 'Excel 文件',
       extensions: ['xlsx'],
+      uniformTypeIdentifiers: ['org.openxmlformats.spreadsheetml.sheet'],
     );
     final file = await openFile(acceptedTypeGroups: [typeGroup]);
     if (file == null) return;
@@ -287,12 +288,12 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
                   _Stat(label: '有效', value: '${processed.validCount}',
                       color: theme.colorScheme.primary),
                   const SizedBox(width: 24),
-                  _Stat(label: '错误', value: '${processed.errorCount}',
+                  _Stat(label: '错误', value: '${processed.errorCount + _result!.errors.length}',
                       color: theme.colorScheme.error),
                   const Spacer(),
-                  if (processed.errorCount > 0)
+                  if (processed.errorCount > 0 || _result!.errors.isNotEmpty)
                     TextButton(
-                      onPressed: () => _showErrors(context, processed.errors),
+                      onPressed: () => _showAllErrors(context, processed.errors, _result!.errors),
                       child: const Text('查看详情'),
                     ),
                 ],
@@ -304,9 +305,19 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
         Expanded(
           child: processed.transactions.isEmpty
               ? Center(
-                  child: Text('没有可导入的数据',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant)),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('没有可导入的数据',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant)),
+                      if (_result!.errors.isNotEmpty || processed.errors.isNotEmpty)
+                        TextButton(
+                          onPressed: () => _showAllErrors(context, processed.errors, _result!.errors),
+                          child: const Text('查看错误详情'),
+                        ),
+                    ],
+                  ),
                 )
               : ListView.separated(
                   itemCount: processed.transactions.length,
@@ -406,24 +417,28 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
     );
   }
 
-  void _showErrors(BuildContext context, List<ImportError> errors) {
+  void _showAllErrors(BuildContext context, List<ImportError> procErrors,
+      List<ImportError> parseErrors) {
+    final allErrors = [...parseErrors, ...procErrors];
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('导入错误'),
         content: SizedBox(
           width: double.maxFinite,
-          child: ListView.builder(
-            itemCount: errors.length,
+          child: allErrors.isEmpty
+              ? const Text('无错误信息，可能是文件格式不匹配')
+              : ListView.builder(
+            itemCount: allErrors.length,
             itemBuilder: (_, i) => ListTile(
               dense: true,
               leading: CircleAvatar(
                 radius: 12,
                 backgroundColor: Theme.of(context).colorScheme.error,
-                child: Text('${errors[i].rowNumber}',
+                child: Text('${allErrors[i].rowNumber}',
                     style: const TextStyle(fontSize: 11, color: Colors.white)),
               ),
-              title: Text(errors[i].message,
+              title: Text(allErrors[i].message,
                   style: Theme.of(context).textTheme.bodySmall),
             ),
           ),
