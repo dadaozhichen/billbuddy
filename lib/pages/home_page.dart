@@ -34,7 +34,7 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(monthSummaryProvider);
-    final todayAsync = ref.watch(todayTransactionsProvider);
+    final monthTxsAsync = ref.watch(monthTransactionsProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
     final accountsAsync = ref.watch(accountsProvider);
     final currentLedgerAsync = ref.watch(currentLedgerProvider);
@@ -93,24 +93,13 @@ class HomePage extends ConsumerWidget {
               ),
             ),
 
-            // ── Section header ──────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                '今日账单',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-            ),
-
-            // ── Today's transactions ─────────────────────────
-            todayAsync.when(
+            // ── Recent transactions (grouped by date) ─────────
+            monthTxsAsync.when(
               data: (txns) {
                 if (txns.isEmpty) {
                   return const EmptyState(
                     icon: Icons.receipt_long_outlined,
-                    message: '今天还没有账单，点右下角记一笔吧',
+                    message: '本月还没有账单，点右下角记一笔吧',
                   );
                 }
 
@@ -127,35 +116,70 @@ class HomePage extends ConsumerWidget {
                   }
                 });
 
-                return ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: txns.length,
-                  separatorBuilder: (_, _) =>
-                      const Divider(height: 1, indent: 72),
-                  itemBuilder: (_, i) {
-                    final t = txns[i];
-                    final cat = cats[t.categoryId];
-                    final acc = accs[t.accountId] ?? '未知';
-                    return TransactionTile(
-                      transaction: t,
-                      category: cat ?? Category(
-                            name: '未分类',
-                            iconName: 'help_outline',
-                            colorValue: 0xFF9E9E9E,
-                            type: t.type,
+                // Group by date.
+                final grouped = <String, List<Transaction>>{};
+                for (final t in txns) {
+                  final key = DateFormat('yyyy-MM-dd').format(t.date);
+                  grouped.putIfAbsent(key, () => []).add(t);
+                }
+                final dates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+
+                return Column(
+                  children: dates.map((date) {
+                    final dayTxns = grouped[date]!;
+                    final isToday = date == DateFormat('yyyy-MM-dd').format(DateTime.now());
+                    return Column(
+                      children: [
+                        // Date header
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                          child: Row(
+                            children: [
+                              Text(
+                                isToday ? '今天' : date,
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: isToday
+                                      ? Theme.of(context).colorScheme.primary
+                                      : null,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${isToday ? '' : ''}${dayTxns.length}笔',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
                           ),
-                      accountName: acc,
-                      onTap: () => _showTransactionDetail(
-                        context, ref, t, cat, acc,
-                      ),
-                      onDelete: t.id != null
-                          ? () => ref
-                              .read(transactionMutationsProvider)
-                              .delete(t.id!)
-                          : null,
+                        ),
+                        // Transactions for this date
+                        ...dayTxns.map((t) {
+                          final cat = cats[t.categoryId];
+                          final acc = accs[t.accountId] ?? '未知';
+                          return TransactionTile(
+                            transaction: t,
+                            category: cat ?? Category(
+                                  name: '未分类',
+                                  iconName: 'help_outline',
+                                  colorValue: 0xFF9E9E9E,
+                                  type: t.type,
+                                ),
+                            accountName: acc,
+                            onTap: () => _showTransactionDetail(
+                              context, ref, t, cat, acc,
+                            ),
+                            onDelete: t.id != null
+                                ? () => ref
+                                    .read(transactionMutationsProvider)
+                                    .delete(t.id!)
+                                : null,
+                          );
+                        }),
+                      ],
                     );
-                  },
+                  }).toList(),
                 );
               },
               loading: () =>
